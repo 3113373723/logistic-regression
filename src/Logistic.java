@@ -1,9 +1,6 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * Performs simple logistic regression.
@@ -34,7 +31,16 @@ public class Logistic {
 		return 1.0 / (1.0 + Math.exp(-z));
 	}
 
-	public void train(List<Instance> instances) {
+	public void train(List<Instance> instances) throws IOException {
+		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+		Date date = new Date(System.currentTimeMillis());
+		String output = "E:\\graduationProject\\logistic-regression\\out\\Log-" + formatter.format(date) + ".txt";
+		File file = new File(output);
+		FileWriter fw = new FileWriter(file);
+		BufferedWriter bw = new BufferedWriter(fw);
+
+		/** 获取当前系统时间*/
+		long startTime = System.currentTimeMillis();
 		for (int n=0; n<ITERATIONS; n++) {
 			double lik = 0.0;
 			for (int i=0; i<instances.size(); i++) {
@@ -48,7 +54,15 @@ public class Logistic {
 				lik += label * Math.log(classify(x)) + (1-label) * Math.log(1- classify(x));
 			}
 			System.out.println("iteration: " + n + " " + Arrays.toString(weights) + " mle: " + lik);
+			bw.write("iteration: " + n + " " + Arrays.toString(weights) + " mle: " + lik);
+			bw.newLine();
 		}
+		/** 获取当前的系统时间，与初始时间相减就是程序运行的毫秒数，除以1000就是秒数*/
+		long endTime = System.currentTimeMillis();
+		double usedTime = (endTime - startTime) / (double) 1000;
+		bw.write(" Train Time is : " + usedTime + "s");
+		bw.close();
+		fw.close();
 	}
 
 	private double classify(int[] x) {
@@ -99,7 +113,7 @@ public class Logistic {
 	}
 
 
-	public static void main(String... args) throws FileNotFoundException {
+	public static void main(String... args) throws IOException {
 		List<Instance> instances = readDataSet("dataset.txt");
 		Logistic logistic = new Logistic(5);
 		logistic.train(instances);
