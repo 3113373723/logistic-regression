@@ -2,6 +2,8 @@ import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static java.lang.Math.abs;
+
 /**
  * Performs simple logistic regression.
  * User: tpeng
@@ -22,9 +24,15 @@ public class Logistic {
 	/** the number of iterations */
 	private int ITERATIONS = 3000;
 
-	public Logistic(int n) {
+	/** 梯度下降的绝对值大小*/
+	private double[] laseGradient;
+	private double avgGradient;
+	private double sigma = 0.1;
+
+	public Logistic(int n, int num) {
 		this.rate = 0.0001;
 		weights = new double[n];
+		laseGradient = new double[num];
 	}
 
 	private static double sigmoid(double z) {
@@ -41,14 +49,18 @@ public class Logistic {
 
 		/** 获取当前系统时间*/
 		long startTime = System.currentTimeMillis();
-		for (int n=0; n<ITERATIONS; n++) {
+		int n = 0;
+		while(n<ITERATIONS) {
 			double lik = 0.0;
+			n += 1;
 			for (int i=0; i<instances.size(); i++) {
 				int[] x = instances.get(i).x;
 				double predicted = classify(x);
 				int label = instances.get(i).label;
+				laseGradient[i] = 0.0;
 				for (int j=0; j<weights.length; j++) {
 					weights[j] = weights[j] + rate * (label - predicted) * x[j];
+					laseGradient[i]+=abs((label - predicted) * x[j]);
 				}
 				// not necessary for learning
 				lik += label * Math.log(classify(x)) + (1-label) * Math.log(1- classify(x));
@@ -56,6 +68,30 @@ public class Logistic {
 			System.out.println("iteration: " + n + " " + Arrays.toString(weights) + " mle: " + lik);
 			bw.write("iteration: " + n + " " + Arrays.toString(weights) + " mle: " + lik);
 			bw.newLine();
+
+			// lazyTrain
+//			lik = 0.0;
+			n += 1;
+			avgGradient = 0.0;
+			for(double gradient:laseGradient){
+				avgGradient+=gradient;
+			}
+			avgGradient = avgGradient/laseGradient.length;
+			for (int i=0; i<instances.size(); i++) {
+				if(laseGradient[i]<sigma*avgGradient)continue;
+				int[] x = instances.get(i).x;
+				double predicted = classify(x);
+				int label = instances.get(i).label;
+				for (int j=0; j<weights.length; j++) {
+					weights[j] = weights[j] + rate * (label - predicted) * x[j];
+				}
+				// not necessary for learning
+//				lik += label * Math.log(classify(x)) + (1-label) * Math.log(1- classify(x));
+			}
+//			System.out.println("iteration: " + n + " " + Arrays.toString(weights) + " mle: " + lik);
+//			bw.write("iteration: " + n + " " + Arrays.toString(weights) + " mle: " + lik);
+//			bw.newLine();
+
 		}
 		/** 获取当前的系统时间，与初始时间相减就是程序运行的毫秒数，除以1000就是秒数*/
 		long endTime = System.currentTimeMillis();
@@ -115,7 +151,7 @@ public class Logistic {
 
 	public static void main(String... args) throws IOException {
 		List<Instance> instances = readDataSet("dataset.txt");
-		Logistic logistic = new Logistic(5);
+		Logistic logistic = new Logistic(5,instances.size());
 		logistic.train(instances);
 		int[] x = {2, 1, 1, 0, 1};
 		System.out.println("prob(1|x) = " + logistic.classify(x));
@@ -123,6 +159,8 @@ public class Logistic {
 		int[] x2 = {1, 0, 1, 0, 0};
 		System.out.println("prob(1|x2) = " + logistic.classify(x2));
 
+		int[] x3 = {1, 1, 0, 0, 0};
+		System.out.println("prob(1|x3) = " + logistic.classify(x3));
 	}
 
 }
